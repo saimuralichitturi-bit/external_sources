@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.env
+known_products/
+*.log
+.DS_Store
+# data/ is committed by Actions — don't ignore it
