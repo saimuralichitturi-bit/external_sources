@@ -48,7 +48,13 @@ def get(url: str, referer: str = "https://www.myntra.com/", timeout=20) -> dict 
     try:
         r = session.get(url, headers=headers, timeout=timeout)
         if r.status_code == 200:
-            return r.json()
+            try:
+                return r.json()
+            except Exception:
+                # Server returned HTML (captcha/block page) instead of JSON
+                preview = r.text[:120].replace('\n', ' ')
+                print(f"  Non-JSON response (likely bot-blocked): {preview}")
+                return None
         print(f"  HTTP {r.status_code}: {url}")
     except Exception as e:
         print(f"  HTTP error: {e}")

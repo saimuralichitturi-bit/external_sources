@@ -128,6 +128,7 @@ def post(url: str, headers: dict, timeout=20, retries=2) -> dict | None:
                 print(f"  [rate limit] waiting {wait}s...")
                 time.sleep(wait)
                 continue
+            print(f"  HTTP {r.status_code} on attempt {attempt+1}: {url[:80]}")
             if attempt < retries:
                 time.sleep(2)
         except Exception as e:

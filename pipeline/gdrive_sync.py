@@ -75,13 +75,21 @@ def _find_file_id(service, folder_id: str, filename: str) -> str | None:
         q=f"name='{filename}' and '{folder_id}' in parents and trashed=false",
         fields="files(id, name)",
         spaces="drive",
+        includeItemsFromAllDrives=True,
+        supportsAllDrives=True,
     ).execute()
     files = resp.get("files", [])
     return files[0]["id"] if files else None
 
 
 def upload_file(service, local_path: str, folder_id: str, mimetype="text/csv") -> str:
-    """Upload or update a file on Google Drive. Returns the file ID."""
+    """Upload or update a file on Google Drive. Returns the file ID.
+
+    Works with both regular My Drive folders (shared with the service account)
+    and Shared Drives (Team Drives). For regular My Drive, the folder must be
+    shared with the service account email as Editor.
+    Note: Use a Shared Drive folder to avoid service-account storage quota limits.
+    """
     from googleapiclient.http import MediaFileUpload
 
     filename = os.path.basename(local_path)
@@ -93,6 +101,7 @@ def upload_file(service, local_path: str, folder_id: str, mimetype="text/csv") -
         service.files().update(
             fileId=existing_id,
             media_body=media,
+            supportsAllDrives=True,
         ).execute()
         print(f"  [Drive] Updated  {filename} (id={existing_id})")
         return existing_id
@@ -103,6 +112,7 @@ def upload_file(service, local_path: str, folder_id: str, mimetype="text/csv") -
             body=meta,
             media_body=media,
             fields="id",
+            supportsAllDrives=True,
         ).execute()
         fid = f["id"]
         print(f"  [Drive] Uploaded {filename} (id={fid})")
