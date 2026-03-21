@@ -287,7 +287,7 @@ def main():
                     help="Fetch product detail API for exact inventory + urgency signals")
     ap.add_argument("--from-snapshots", metavar="FILE",
                     help="Re-estimate from an existing snapshots CSV (no API calls)")
-    ap.add_argument("--out-dir",        default=".",
+    ap.add_argument("--out-dir",        default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data"),
                     help="Output directory for CSVs (default: current dir)")
     args = ap.parse_args()
 

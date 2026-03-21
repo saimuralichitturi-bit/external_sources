@@ -1,0 +1,82 @@
+name: Daily Market Intelligence Pipeline
+
+on:
+  schedule:
+    - cron: '30 0 * * *'   # 6 AM IST daily
+  workflow_dispatch:         # allow manual trigger
+
+jobs:
+  scrape-and-upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # ── Blinkit (all 7 locations) ────────────────────────────────
+      - name: Blinkit — all locations
+        run: |
+          python blinkit/blinkit_sales_estimator.py \
+            --keywords "chips,protein powder,cold drinks,snacks,dairy" \
+            --all-locations
+        continue-on-error: true
+
+      # ── Myntra ──────────────────────────────────────────────────
+      - name: Myntra
+        run: |
+          python myntra/myntra_sales_estimator.py \
+            --keywords "tshirts,sneakers,kurta,jeans,shoes" \
+            --pages 3 \
+            --out-dir data
+        continue-on-error: true
+
+      # ── Amazon ──────────────────────────────────────────────────
+      - name: Amazon
+        run: |
+          python amazon/amazon_scraper.py \
+            --keywords "protein powder,running shoes,electronics" \
+            --top 30 \
+            --out-dir data
+        continue-on-error: true
+
+      # ── Flipkart ────────────────────────────────────────────────
+      - name: Flipkart
+        run: |
+          python flipkart/flipkart_scraper.py \
+            --keywords "protein powder,running shoes,electronics" \
+            --top 30 \
+            --out-dir data
+        continue-on-error: true
+
+      # ── Consolidate + Upload to Drive ────────────────────────────
+      - name: Consolidate CSV files
+        run: python pipeline/consolidate.py --data-dir data --out-dir data
+
+      - name: Upload to Google Drive
+        env:
+          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+          GDRIVE_FOLDER_ID:        ${{ secrets.GDRIVE_FOLDER_ID }}
+        run: |
+          python pipeline/gdrive_sync.py \
+            --upload \
+            --data-dir data \
+            --folder-id "$GDRIVE_FOLDER_ID"
+
+      # ── Commit updated data/ to repo ─────────────────────────────
+      - name: Commit data files
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/
+          git diff --cached --quiet || git commit -m "chore: daily data update $(date -u +%Y-%m-%d)"
+          git push
+        continue-on-error: true

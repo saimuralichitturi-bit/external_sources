@@ -207,7 +207,7 @@ def main():
                     help="Minutes between snapshots (default: 60)")
     ap.add_argument("--runs",     type=int, default=4,
                     help="Number of snapshots to take (default: 4)")
-    ap.add_argument("--out-dir",  default=".",
+    ap.add_argument("--out-dir",  default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data"),
                     help="Output directory for CSVs")
     args = ap.parse_args()
 

@@ -113,16 +113,28 @@ def parse_snippet(snippet: dict, position: int) -> dict | None:
     }
 
 # ── HTTP ──────────────────────────────────────────────────────────────────────
-def post(url: str, headers: dict, timeout=20) -> dict | None:
-    try:
-        if CURL_OK:
-            r = cf_requests.post(url, headers=headers, impersonate="chrome120", timeout=timeout)
-        else:
-            r = cf_requests.post(url, headers=headers, timeout=timeout)
-        if r.status_code == 200:
-            return r.json()
-    except Exception as e:
-        print(f"  HTTP error: {e}")
+def post(url: str, headers: dict, timeout=20, retries=2) -> dict | None:
+    """POST to Blinkit API with automatic retry on failure."""
+    for attempt in range(retries + 1):
+        try:
+            if CURL_OK:
+                r = cf_requests.post(url, headers=headers, impersonate="chrome120", timeout=timeout)
+            else:
+                r = cf_requests.post(url, headers=headers, timeout=timeout)
+            if r.status_code == 200:
+                return r.json()
+            if r.status_code == 429:
+                wait = 5 * (attempt + 1)
+                print(f"  [rate limit] waiting {wait}s...")
+                time.sleep(wait)
+                continue
+            if attempt < retries:
+                time.sleep(2)
+        except Exception as e:
+            if attempt < retries:
+                time.sleep(2)
+            else:
+                print(f"  HTTP error: {e}")
     return None
 
 def search_page(keyword: str, offset: int, headers: dict, limit=24) -> list[dict]:

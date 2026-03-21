@@ -4,4 +4,24 @@ __pycache__/
 known_products/
 *.log
 .DS_Store
+
+# Credentials — never commit
+credentials.json
+service_account.json
+secrets.toml
+.streamlit/secrets.toml
+
+# Temp/working files generated during runs (use data/ for committed outputs)
+snapshots_cache.csv
+sales_report.json
+/blinkit/*.csv
+/blinkit/*.json
+
+# Root-level accidental outputs (scrapers should write to data/)
+/*.csv
+/*.json
+
+# Pipeline temp
+pipeline/*.csv
+
 # data/ is committed by Actions — don't ignore it

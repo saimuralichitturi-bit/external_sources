@@ -150,9 +150,11 @@ BRAND_COLS = [
     "as_of",
 ]
 
-SALES_FILE  = "sales_estimates.csv"
-BRAND_FILE  = "brand_estimates.csv"
-REPORT_FILE = "sales_report.json"
+_DATA_DIR   = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")
+os.makedirs(_DATA_DIR, exist_ok=True)
+SALES_FILE  = os.path.join(_DATA_DIR, "blinkit_sales_estimates.csv")
+BRAND_FILE  = os.path.join(_DATA_DIR, "blinkit_brand_estimates.csv")
+REPORT_FILE = os.path.join(_DATA_DIR, "blinkit_sales_report.json")
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -170,7 +172,7 @@ def track_inventory(product_ids: list[str], headers: dict,
     ts = now_str()
 
     # Load previous snapshots from cache
-    cache_file = "snapshots_cache.csv"
+    cache_file = os.path.join(_DATA_DIR, "blinkit_snapshots_cache.csv")
     if os.path.exists(cache_file):
         import csv as _csv
         with open(cache_file, newline="", encoding="utf-8") as f:
@@ -197,7 +199,7 @@ def track_inventory(product_ids: list[str], headers: dict,
             snapshots[pid].append(snap)
             new_rows.append(snap)
             inv_str = "50+" if snap.get("inventory") == INV_CAP else str(snap.get("inventory", "?"))
-            print(f"  {pid}: inv={inv_str} ₹{snap.get('price',0):.0f} rc={snap.get('rating_count','?')}")
+            print(f"  {pid}: inv={inv_str} Rs.{snap.get('price',0):.0f} rc={snap.get('rating_count','?')}")
         time.sleep(0.3)
 
     # Save updated cache (append new rows)
@@ -211,7 +213,7 @@ def track_inventory(product_ids: list[str], headers: dict,
             if write_header:
                 w.writeheader()
             w.writerows(new_rows)
-        print(f"  Cache updated → {cache_file} (+{len(new_rows)} rows)")
+        print(f"  Cache updated -> {cache_file} (+{len(new_rows)} rows)")
 
     return dict(snapshots)
 
@@ -230,7 +232,7 @@ def fetch_pdp_snapshot(product_id: str, headers: dict) -> dict | None:
         print(f"    Error fetching {product_id}: {e}")
         return None
 
-    snippets = data.get("response", {}).get("snippets", [])
+    snippets = data.get("response", {}).get("snippets") or []
     result = {"product_id": str(product_id)}
 
     for s in snippets:
@@ -621,6 +623,7 @@ def run_pipeline(
         product_ids = [p["product_id"] for p in discovered]
         product_meta = {p["product_id"]: p for p in discovered}
         print(f"  Discovered {len(product_ids)} unique products")
+        time.sleep(1)  # brief pause before next API call
     else:
         product_meta = {}
 
@@ -752,7 +755,7 @@ def run_pipeline(
 
     # ── Print results
     print(f"\n{'='*65}")
-    print(f"PRODUCT ESTIMATES — {location.upper()}")
+    print(f"PRODUCT ESTIMATES -- {location.upper()}")
     print(f"{'='*65}")
     print(f"{'Brand':<20} {'Product':<28} {'/Day':>6} {'/Month':>8} {'Conf':<8} {'Method'}")
     print(f"{'-'*90}")
@@ -768,7 +771,7 @@ def run_pipeline(
         )
 
     print(f"\n{'='*65}")
-    print(f"BRAND ESTIMATES — {location.upper()}")
+    print(f"BRAND ESTIMATES -- {location.upper()}")
     print(f"{'='*65}")
     print(f"{'Brand':<25} {'Prods':>5} {'Daily':>8} {'Monthly':>10} {'RatingCt':>10} {'SOV%':>6}")
     print(f"{'-'*70}")
@@ -809,9 +812,9 @@ def run_pipeline(
     with open(REPORT_FILE, "w") as f:
         json.dump(report, f, indent=2, default=str)
 
-    print(f"\n✅ {SALES_FILE} (+{len(estimates)} rows)")
-    print(f"✅ {BRAND_FILE} (+{len(brand_rows)} rows)")
-    print(f"✅ {REPORT_FILE}")
+    print(f"\n[done] {SALES_FILE} (+{len(estimates)} rows)")
+    print(f"[done] {BRAND_FILE} (+{len(brand_rows)} rows)")
+    print(f"[done] {REPORT_FILE}")
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -902,7 +905,7 @@ def run_from_snapshots(snapshots_file: str, location: str):
         brand_agg[brand]["products"].append(row)
 
     append_csv(SALES_FILE, estimates, ESTIMATE_COLS)
-    print(f"\n✅ {SALES_FILE}")
+    print(f"\n[done] {SALES_FILE}")
 
     print(f"\n{'='*50}")
     print("BRAND TOTALS")
@@ -918,27 +921,36 @@ def run_from_snapshots(snapshots_file: str, location: str):
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 def main():
+    from blinkit_core import LOCATIONS as ALL_LOCATIONS
+
     parser = argparse.ArgumentParser(
         description="Blinkit Sales Estimator — multi-signal units sold approximation",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Track chips category for 2hrs, estimate every 30min
-  python blinkit_sales_estimator.py --keywords "chips,namkeen" --location mumbai --interval 30 --duration 120
+  # Single location
+  python blinkit_sales_estimator.py --keywords "chips,namkeen" --location mumbai
+
+  # All 7 locations (recommended for daily runs)
+  python blinkit_sales_estimator.py --keywords "chips,namkeen" --all-locations
+
+  # Specific locations
+  python blinkit_sales_estimator.py --keywords "protein powder" --locations "mumbai,bangalore,delhi"
 
   # From existing inventory snapshots
   python blinkit_sales_estimator.py --from-snapshots snapshots.csv --location vijayawada
-
-  # Specific products
-  python blinkit_sales_estimator.py --products 447847,125240 --keywords "butter" --location mumbai --interval 15 --duration 60
         """
     )
     parser.add_argument("--keywords",       type=str, help="Comma-separated search keywords")
     parser.add_argument("--products",       type=str, help="Comma-separated product IDs to track")
     parser.add_argument("--category",       type=str, default="", help="Category label (for tagging)")
-    parser.add_argument("--location",       type=str, default="vijayawada")
+    parser.add_argument("--location",       type=str, default="vijayawada",
+                        help="Single location (default: vijayawada)")
+    parser.add_argument("--locations",      type=str, default="",
+                        help="Comma-separated list of locations to run")
+    parser.add_argument("--all-locations",  action="store_true",
+                        help="Run across all 7 locations: " + ", ".join(ALL_LOCATIONS))
     parser.add_argument("--cookie",         type=str, default="")
-    # --interval and --duration removed: use GitHub Actions cron schedule instead
     parser.add_argument("--from-snapshots", type=str, help="Compute estimates from existing snapshots.csv")
     args = parser.parse_args()
 
@@ -953,17 +965,34 @@ Examples:
         print("Provide --keywords or --products (or --from-snapshots)")
         sys.exit(1)
 
-    headers = make_headers(args.location, args.cookie)
+    # Resolve which locations to run
+    if args.all_locations:
+        locations = list(ALL_LOCATIONS.keys())
+    elif args.locations:
+        locations = [l.strip() for l in args.locations.split(",") if l.strip()]
+        invalid = [l for l in locations if l not in ALL_LOCATIONS]
+        if invalid:
+            print(f"Unknown locations: {invalid}. Valid: {list(ALL_LOCATIONS.keys())}")
+            sys.exit(1)
+    else:
+        locations = [args.location]
 
-    run_pipeline(
-        keywords=keywords,
-        product_ids=product_ids,
-        location=args.location,
-        headers=headers,
-        interval_mins=0,
-        duration_mins=0,
-        category=args.category,
-    )
+    print(f"Running for {len(locations)} location(s): {', '.join(locations)}")
+
+    for loc in locations:
+        headers = make_headers(loc, args.cookie)
+        run_pipeline(
+            keywords=keywords,
+            product_ids=product_ids,
+            location=loc,
+            headers=headers,
+            interval_mins=0,
+            duration_mins=0,
+            category=args.category,
+        )
+        if len(locations) > 1:
+            print(f"\n  [pause 5s before next location]")
+            time.sleep(5)
 
 
 if __name__ == "__main__":
