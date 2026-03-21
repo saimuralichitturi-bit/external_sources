@@ -8,6 +8,8 @@ known_products/
 # Credentials — never commit
 credentials.json
 service_account.json
+client_secrets.json
+token.json
 secrets.toml
 .streamlit/secrets.toml
 
