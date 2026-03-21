@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(python myntra_sales_estimator.py --keywords \"tshirts\" --pages 1 --out-dir ../data)",
+      "Bash(python myntra_sales_estimator.py --keywords \"sneakers\" --pages 1 --detail --out-dir ../data)"
+    ]
+  }
+}
