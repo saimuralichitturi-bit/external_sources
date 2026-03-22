@@ -13,6 +13,8 @@ export default {
     }
 
     const MAX_STORAGE_BYTES = 8 * 1024 * 1024 * 1024;
+    const pathname = new URL(request.url).pathname;
+    const key = pathname.slice(1);
 
     if (request.method === "PUT" || request.method === "POST") {
       const currentBytes = parseInt(await env.R2_STORAGE_TRACKER.get("total_bytes") || "0");
@@ -29,7 +31,6 @@ export default {
         });
       }
 
-      const key = new URL(request.url).pathname.slice(1);
       await env.MY_BUCKET.put(key, request.body);
 
       const newTotal = currentBytes + contentLength;
@@ -44,7 +45,6 @@ export default {
     }
 
     if (request.method === "DELETE") {
-      const key = new URL(request.url).pathname.slice(1);
       const object = await env.MY_BUCKET.head(key);
 
       if (object) {
@@ -58,15 +58,33 @@ export default {
       return new Response(JSON.stringify({ error: "File not found" }), { status: 404 });
     }
 
-    if (request.method === "GET" && new URL(request.url).pathname === "/usage") {
-      const currentBytes = parseInt(await env.R2_STORAGE_TRACKER.get("total_bytes") || "0");
-      return new Response(JSON.stringify({
-        usedBytes: currentBytes,
-        usedGB: (currentBytes / 1024 / 1024 / 1024).toFixed(2),
-        limitGB: 8,
-        remainingGB: ((MAX_STORAGE_BYTES - currentBytes) / 1024 / 1024 / 1024).toFixed(2),
-        percentUsed: ((currentBytes / MAX_STORAGE_BYTES) * 100).toFixed(1) + "%"
-      }), { headers: { "Content-Type": "application/json" } });
+    if (request.method === "GET") {
+      // Storage usage stats
+      if (pathname === "/usage") {
+        const currentBytes = parseInt(await env.R2_STORAGE_TRACKER.get("total_bytes") || "0");
+        return new Response(JSON.stringify({
+          usedBytes: currentBytes,
+          usedGB: (currentBytes / 1024 / 1024 / 1024).toFixed(2),
+          limitGB: 8,
+          remainingGB: ((MAX_STORAGE_BYTES - currentBytes) / 1024 / 1024 / 1024).toFixed(2),
+          percentUsed: ((currentBytes / MAX_STORAGE_BYTES) * 100).toFixed(1) + "%"
+        }), { headers: { "Content-Type": "application/json" } });
+      }
+
+      // Download file by key (e.g. GET /unified_snapshots.csv)
+      const object = await env.MY_BUCKET.get(key);
+      if (!object) {
+        return new Response(JSON.stringify({ error: "File not found", key }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+      return new Response(object.body, {
+        headers: {
+          "Content-Type": "text/csv",
+          "Content-Disposition": `attachment; filename="${key}"`,
+        }
+      });
     }
 
     return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405 });

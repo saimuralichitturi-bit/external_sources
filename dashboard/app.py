@@ -2,16 +2,16 @@
 dashboard/app.py
 ================
 Streamlit Market Intelligence Dashboard
-Pulls unified CSV files from Google Drive and displays real-time
+Pulls unified CSV files from Cloudflare R2 and displays real-time
 inventory, pricing, sales estimates, and brand analytics
 across Blinkit, Myntra, Amazon, and Flipkart.
 
 Setup:
-  1. Add credentials to .streamlit/secrets.toml (see .streamlit/secrets.toml.example)
+  1. Add R2_WORKER_URL and R2_API_KEY to .env (or .streamlit/secrets.toml)
   2. Run: streamlit run dashboard/app.py
 
 Streamlit Cloud:
-  Add GOOGLE_CREDENTIALS_JSON and GDRIVE_FOLDER_ID in Streamlit Secrets UI.
+  Add R2_WORKER_URL and R2_API_KEY in the Streamlit Secrets UI.
 """
 
 import io, os, json, sys
@@ -22,6 +22,13 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
+
+# Load .env for local runs
+try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).parent.parent / ".env")
+except ImportError:
+    pass
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -46,107 +53,55 @@ PLATFORM_ICONS = {
     "flipkart": "🔵",
 }
 
-# ── Google Drive fetch ────────────────────────────────────────────────────────
+# ── Cloudflare R2 fetch ───────────────────────────────────────────────────────
 
-def _get_folder_id() -> str:
-    """Get Drive folder ID from Streamlit secrets or environment."""
+def _get_r2_config() -> tuple[str, str]:
+    """Return (worker_url, api_key) from Streamlit secrets or environment."""
     try:
-        return st.secrets["GDRIVE_FOLDER_ID"]
+        url = st.secrets["R2_WORKER_URL"]
+        key = st.secrets["R2_API_KEY"]
     except Exception:
-        return os.environ.get("GDRIVE_FOLDER_ID", "")
-
-
-def _get_credentials_json() -> str:
-    """Get service account credentials JSON string."""
-    try:
-        raw = st.secrets["GOOGLE_CREDENTIALS_JSON"]
-        # If stored as TOML table, convert back to JSON string
-        if isinstance(raw, dict):
-            return json.dumps(dict(raw))
-        return raw
-    except Exception:
-        return os.environ.get("GOOGLE_CREDENTIALS_JSON", "")
-
-
-def _build_drive_service():
-    from google.oauth2 import service_account
-    from googleapiclient.discovery import build
-
-    scopes = ["https://www.googleapis.com/auth/drive.readonly"]
-    raw = _get_credentials_json()
-
-    if raw:
-        info = json.loads(raw)
-        creds = service_account.Credentials.from_service_account_info(info, scopes=scopes)
-    else:
-        # Try local credentials file
-        for fname in ["credentials.json", "service_account.json"]:
-            p = Path(__file__).parent.parent / fname
-            if p.exists():
-                creds = service_account.Credentials.from_service_account_file(str(p), scopes=scopes)
-                break
-        else:
-            return None
-
-    return build("drive", "v3", credentials=creds)
+        url = os.environ.get("R2_WORKER_URL", "")
+        key = os.environ.get("R2_API_KEY", "")
+    return url.rstrip("/"), key
 
 
 @st.cache_data(ttl=600, show_spinner=False)
-def fetch_csv_from_drive(filename: str) -> pd.DataFrame | None:
+def fetch_csv_from_r2(filename: str) -> pd.DataFrame | None:
     """
-    Download a CSV file from Google Drive by name.
+    Download a CSV file from Cloudflare R2 via the Worker API.
     Cached for 10 minutes — refreshes automatically.
     """
-    folder_id = _get_folder_id()
-    if not folder_id:
+    worker_url, api_key = _get_r2_config()
+    if not worker_url or not api_key:
         return None
 
     try:
-        import io
-        from googleapiclient.http import MediaIoBaseDownload
-
-        service = _build_drive_service()
-        if not service:
-            return None
-
-        # Find file by name
-        resp = service.files().list(
-            q=f"name='{filename}' and '{folder_id}' in parents and trashed=false",
-            fields="files(id, name, modifiedTime)",
-            spaces="drive",
-        ).execute()
-        files = resp.get("files", [])
-        if not files:
-            return None
-
-        fid = files[0]["id"]
-        request = service.files().get_media(fileId=fid)
-        buf = io.BytesIO()
-        dl = MediaIoBaseDownload(buf, request)
-        done = False
-        while not done:
-            _, done = dl.next_chunk()
-
-        buf.seek(0)
-        return pd.read_csv(buf, dtype=str)
-
+        import requests
+        r = requests.get(
+            f"{worker_url}/{filename}",
+            headers={"X-API-Key": api_key},
+            timeout=30,
+        )
+        if r.status_code == 200:
+            return pd.read_csv(io.StringIO(r.text), dtype=str)
+        return None
     except Exception as e:
-        st.warning(f"Drive fetch error for {filename}: {e}")
+        st.warning(f"R2 fetch error for {filename}: {e}")
         return None
 
 
 def load_local_csv(filename: str) -> pd.DataFrame | None:
     """Fallback: load from local data/ directory."""
-    data_dir = Path(__file__).parent.parent / "data"
-    path = data_dir / filename
+    path = Path(__file__).parent.parent / "data" / filename
     if path.exists():
         return pd.read_csv(path, dtype=str)
     return None
 
 
 def get_df(filename: str) -> pd.DataFrame:
-    """Try Drive first, fall back to local data/."""
-    df = fetch_csv_from_drive(filename)
+    """Try R2 first, fall back to local data/."""
+    df = fetch_csv_from_r2(filename)
     if df is None or df.empty:
         df = load_local_csv(filename)
     if df is None:
@@ -250,7 +205,7 @@ def render_sidebar(snap_df: pd.DataFrame, est_df: pd.DataFrame):
             locations = st.sidebar.multiselect("Blinkit Locations", options=sorted(locs), default=sorted(locs))
 
     st.sidebar.markdown("---")
-    st.sidebar.caption("Data refreshes every 10 min from Google Drive")
+    st.sidebar.caption("Data refreshes every 10 min from Cloudflare R2")
 
     return sel_platforms, start_date, end_date, locations
 
@@ -261,7 +216,7 @@ def tab_overview(snap_df: pd.DataFrame, est_df: pd.DataFrame, brand_df: pd.DataF
     st.header("Platform Overview")
 
     if snap_df.empty:
-        st.info("No snapshot data yet. Run the scrapers and upload to Drive.")
+        st.info("No snapshot data yet. Run the scrapers and upload to R2.")
         return
 
     df = snap_df[snap_df["platform"].isin(platforms)]
@@ -667,17 +622,17 @@ def tab_raw(snap_df: pd.DataFrame, est_df: pd.DataFrame, brand_df: pd.DataFrame,
 
 def main():
     # Load data
-    with st.spinner("Loading data from Google Drive..."):
+    with st.spinner("Loading data from Cloudflare R2..."):
         snap_df  = load_snapshots()
         est_df   = load_estimates()
         brand_df = load_brands()
 
-    # Check Drive connection
-    folder_id = _get_folder_id()
-    if not folder_id:
+    # Check R2 connection
+    worker_url, _ = _get_r2_config()
+    if not worker_url:
         st.warning(
-            "Google Drive not configured. Add `GDRIVE_FOLDER_ID` and "
-            "`GOOGLE_CREDENTIALS_JSON` to `.streamlit/secrets.toml` or environment variables. "
+            "R2 not configured. Add `R2_WORKER_URL` and `R2_API_KEY` "
+            "to your `.env` file or Streamlit Secrets. "
             "Showing local data/ files for now."
         )
 
@@ -710,7 +665,7 @@ def main():
     st.markdown("---")
     last_snap = snap_df["scraped_at"].max() if not snap_df.empty and "scraped_at" in snap_df.columns else None
     last_str  = last_snap.strftime("%Y-%m-%d %H:%M") if pd.notna(last_snap) else "—"
-    st.caption(f"Last data: {last_str}  |  Cache TTL: 10 min  |  Data source: Google Drive")
+    st.caption(f"Last data: {last_str}  |  Cache TTL: 10 min  |  Data source: Cloudflare R2")
 
 
 if __name__ == "__main__":
