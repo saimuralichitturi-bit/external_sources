@@ -241,42 +241,97 @@ BRAND_COLS = [
 ]
 
 
+# Staging files written by each scraper — deleted after consolidation
+STAGING_FILES = [
+    "amazon_snapshots.csv", "amazon_pdp_snapshots.csv",
+    "amazon_sales_estimates.csv", "amazon_brand_estimates.csv",
+    "flipkart_snapshots.csv", "flipkart_pdp_snapshots.csv",
+    "flipkart_sales_estimates.csv", "flipkart_brand_estimates.csv",
+    "myntra_snapshots.csv", "myntra_sales_estimates.csv", "myntra_brand_estimates.csv",
+    "blinkit_sales_estimates.csv", "blinkit_snapshots_cache.csv",
+    "blinkit_inv_snapshots.csv", "blinkit_sales_report.json",
+    "blinkit_category_products.csv", "blinkit_category_sov.csv",
+    "blinkit_category_new_products.csv",
+]
+
+
+def _append_to_unified(new_df: pd.DataFrame, path: str, dedup_cols: list[str]) -> pd.DataFrame:
+    """Append new_df to existing CSV at path, deduplicate, return merged df."""
+    if os.path.exists(path) and os.path.getsize(path) > 0:
+        existing = pd.read_csv(path, dtype=str)
+        merged = pd.concat([existing, new_df], ignore_index=True)
+    else:
+        merged = new_df.copy()
+
+    # Deduplicate: keep latest row for each (platform, product_id, scraped_at)
+    valid_dedup = [c for c in dedup_cols if c in merged.columns]
+    if valid_dedup:
+        merged = merged.drop_duplicates(subset=valid_dedup, keep="last")
+
+    return merged
+
+
+def _delete_staging(data_dir: str):
+    """Remove per-platform staging CSVs after successful consolidation."""
+    deleted = []
+    for fname in STAGING_FILES:
+        path = os.path.join(data_dir, fname)
+        if os.path.exists(path):
+            os.remove(path)
+            deleted.append(fname)
+    if deleted:
+        print(f"  Cleaned up {len(deleted)} staging file(s).")
+
+
 def run(data_dir: str, out_dir: str):
     os.makedirs(out_dir, exist_ok=True)
     print(f"Reading from: {data_dir}")
 
-    # Snapshots
+    # ── Snapshots ─────────────────────────────────────────────────────────────
     snap_frames = [
         load_blinkit_snapshots(data_dir),
         load_myntra_snapshots(data_dir),
         load_amazon_snapshots(data_dir),
         load_flipkart_snapshots(data_dir),
     ]
-    snap_df = pd.concat([f for f in snap_frames if not f.empty], ignore_index=True)
-    snap_df = snap_df[SNAPSHOT_COLS]
+    new_snap = pd.concat([f for f in snap_frames if not f.empty], ignore_index=True)
+    if not new_snap.empty:
+        new_snap = new_snap.reindex(columns=SNAPSHOT_COLS)
     snap_path = os.path.join(out_dir, "unified_snapshots.csv")
+    snap_df = _append_to_unified(new_snap, snap_path,
+                                 ["platform", "product_id", "scraped_at"])
     snap_df.to_csv(snap_path, index=False)
-    print(f"  unified_snapshots.csv  -> {len(snap_df):,} rows")
+    print(f"  unified_snapshots.csv  -> {len(snap_df):,} rows total "
+          f"(+{len(new_snap):,} new)")
 
-    # Estimates
-    est_df = load_estimates(data_dir)
-    if not est_df.empty:
-        est_df = est_df[ESTIMATE_COLS]
+    # ── Estimates ─────────────────────────────────────────────────────────────
+    new_est = load_estimates(data_dir)
+    if not new_est.empty:
+        new_est = new_est.reindex(columns=ESTIMATE_COLS)
     est_path = os.path.join(out_dir, "unified_estimates.csv")
+    est_df = _append_to_unified(new_est, est_path,
+                                ["platform", "product_id", "scraped_at"])
     est_df.to_csv(est_path, index=False)
-    print(f"  unified_estimates.csv  -> {len(est_df):,} rows")
+    print(f"  unified_estimates.csv  -> {len(est_df):,} rows total "
+          f"(+{len(new_est):,} new)")
 
-    # Brands
-    brand_df = load_brands(data_dir)
-    if not brand_df.empty:
-        brand_df = brand_df[BRAND_COLS]
+    # ── Brands ────────────────────────────────────────────────────────────────
+    new_brand = load_brands(data_dir)
+    if not new_brand.empty:
+        new_brand = new_brand.reindex(columns=BRAND_COLS)
     brand_path = os.path.join(out_dir, "unified_brands.csv")
+    brand_df = _append_to_unified(new_brand, brand_path,
+                                  ["platform", "brand", "scraped_at"])
     brand_df.to_csv(brand_path, index=False)
-    print(f"  unified_brands.csv     -> {len(brand_df):,} rows")
+    print(f"  unified_brands.csv     -> {len(brand_df):,} rows total "
+          f"(+{len(new_brand):,} new)")
+
+    # ── Cleanup staging files ─────────────────────────────────────────────────
+    _delete_staging(data_dir)
 
     print("Consolidation complete.")
 
-    # Auto-categorize using rules JSON
+    # ── Auto-categorize ───────────────────────────────────────────────────────
     rules_path = os.path.join(os.path.dirname(__file__), "..", "data", "category_rules.json")
     if os.path.exists(rules_path):
         try:
