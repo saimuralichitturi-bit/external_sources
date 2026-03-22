@@ -26,14 +26,15 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
 def load_blinkit_snapshots(data_dir: str) -> pd.DataFrame:
     """
-    Blinkit doesn't write a separate snapshots file — it writes
-    blinkit_sales_estimates.csv which contains the latest per-product data.
-    We also check blinkit_snapshots_cache.csv for inventory history.
+    Blinkit data sources:
+      - blinkit_sales_estimates.csv  : keyword-based sales estimator output
+      - blinkit_category_products.csv: full category browse (all 20 categories)
+      - blinkit_snapshots_cache.csv  : inventory tracker snapshots
+      - blinkit_inv_snapshots.csv    : inventory tracker snapshots (alt name)
     """
     rows = []
-    # Primary: sales estimates file (has product_id, name, brand, price, location, as_of)
-    for fname in ["blinkit_sales_estimates.csv", "blinkit_snapshots_cache.csv",
-                  "blinkit_inv_snapshots.csv"]:
+    for fname in ["blinkit_sales_estimates.csv", "blinkit_category_products.csv",
+                  "blinkit_snapshots_cache.csv", "blinkit_inv_snapshots.csv"]:
         path = os.path.join(data_dir, fname)
         if not os.path.exists(path):
             continue
@@ -44,7 +45,7 @@ def load_blinkit_snapshots(data_dir: str) -> pd.DataFrame:
                 "product_id":   r.get("product_id", ""),
                 "name":         r.get("name", ""),
                 "brand":        r.get("brand", ""),
-                "category":     r.get("category", ""),
+                "category":     r.get("category") or r.get("category_name", ""),
                 "price":        _float(r.get("price")),
                 "mrp":          _float(r.get("mrp")),
                 "discount_pct": _float(r.get("discount_pct")),

@@ -71,7 +71,7 @@ def upload_file(filename: str, local_path: str, worker_url: str, api_key: str) -
 
     try:
         if is_cffi:
-            r = req.put(url, content=data, headers=headers, timeout=60,
+            r = req.put(url, data=data, headers=headers, timeout=60,
                         impersonate="chrome120")
         else:
             r = req.put(url, data=data, headers=headers, timeout=60)

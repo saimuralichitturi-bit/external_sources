@@ -102,9 +102,11 @@ NEW_COLS = [
     "product_id", "name", "brand", "unit", "price", "mrp",
 ]
 
-PRODUCT_FILE = "category_products.csv"
-SOV_FILE     = "category_sov.csv"
-NEW_FILE     = "category_new_products.csv"
+_DATA_DIR    = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")
+os.makedirs(_DATA_DIR, exist_ok=True)
+PRODUCT_FILE = os.path.join(_DATA_DIR, "blinkit_category_products.csv")
+SOV_FILE     = os.path.join(_DATA_DIR, "blinkit_category_sov.csv")
+NEW_FILE     = os.path.join(_DATA_DIR, "blinkit_category_new_products.csv")
 
 # ── Scraper ───────────────────────────────────────────────────────────────────
 def scrape_category(cat_id: int, headers: dict, max_pages=20, delay=0.6) -> list[dict]:
@@ -296,7 +298,7 @@ def run_once(cat_ids: list[int], headers: dict):
 
     for cat_id in cat_ids:
         cat_name = CATEGORIES.get(cat_id, f"Category {cat_id}")
-        print(f"\n→ [{cat_id}] {cat_name} ...", flush=True)
+        print(f"\n-> [{cat_id}] {cat_name} ...", flush=True)
 
         products = scrape_category(cat_id, headers)
         if not products:
@@ -326,15 +328,15 @@ def run_once(cat_ids: list[int], headers: dict):
             )
 
         if new_rows:
-            print(f"\n  🆕 {len(new_rows)} NEW products detected!")
+            print(f"\n  [NEW] {len(new_rows)} NEW products detected!")
             for r in new_rows[:5]:
-                print(f"     {r['brand']} — {r['name']} ({r['unit']}) ₹{r['price']}")
+                print(f"     {r['brand']} - {r['name']} ({r['unit']}) Rs.{r['price']}")
 
         time.sleep(1.0)
 
-    print(f"\n✅ {PRODUCT_FILE}")
-    print(f"✅ {SOV_FILE}")
-    print(f"✅ {NEW_FILE}")
+    print(f"\n[done] {PRODUCT_FILE}")
+    print(f"[done] {SOV_FILE}")
+    print(f"[done] {NEW_FILE}")
 
 
 def main():
