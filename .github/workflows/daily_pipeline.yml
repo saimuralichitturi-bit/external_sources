@@ -57,19 +57,15 @@ jobs:
             --out-dir data
         continue-on-error: true
 
-      # ── Consolidate + Upload to Drive ────────────────────────────
+      # ── Consolidate + Upload to R2 ───────────────────────────────
       - name: Consolidate CSV files
         run: python pipeline/consolidate.py --data-dir data --out-dir data
 
-      - name: Upload to Google Drive
+      - name: Upload to Cloudflare R2
         env:
-          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
-          GDRIVE_FOLDER_ID:        ${{ secrets.GDRIVE_FOLDER_ID }}
-        run: |
-          python pipeline/gdrive_sync.py \
-            --upload \
-            --data-dir data \
-            --folder-id "$GDRIVE_FOLDER_ID"
+          R2_WORKER_URL: ${{ secrets.R2_WORKER_URL }}
+          R2_API_KEY:    ${{ secrets.R2_API_KEY }}
+        run: python pipeline/r2_sync.py --upload --data-dir data
 
       # ── Commit updated data/ to repo ─────────────────────────────
       - name: Commit data files

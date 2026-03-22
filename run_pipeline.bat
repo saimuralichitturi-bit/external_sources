@@ -1,7 +1,7 @@
 @echo off
 :: ============================================================
 :: Market Intelligence Daily Pipeline
-:: Runs all scrapers, consolidates CSVs, uploads to Google Drive
+:: Runs all scrapers, consolidates CSVs, uploads to Cloudflare R2
 :: Scheduled via Windows Task Scheduler at 6:00 AM IST daily
 :: ============================================================
 
@@ -61,10 +61,10 @@ echo [5/6] Consolidating CSVs... >> "%LOGFILE%"
 python pipeline\consolidate.py --data-dir data --out-dir data >> "%LOGFILE%" 2>&1
 echo Consolidate exit code: %errorlevel% >> "%LOGFILE%"
 
-:: ── Upload to Google Drive ────────────────────────────────────
-echo [6/6] Uploading to Google Drive... >> "%LOGFILE%"
-python pipeline\gdrive_sync.py --upload --data-dir data >> "%LOGFILE%" 2>&1
-echo Drive upload exit code: %errorlevel% >> "%LOGFILE%"
+:: ── Upload to Cloudflare R2 ──────────────────────────────────
+echo [6/6] Uploading to Cloudflare R2... >> "%LOGFILE%"
+python pipeline\r2_sync.py --upload --data-dir data >> "%LOGFILE%" 2>&1
+echo R2 upload exit code: %errorlevel% >> "%LOGFILE%"
 
 echo ============================================================ >> "%LOGFILE%"
 echo Pipeline finished: %date% %time% >> "%LOGFILE%"
