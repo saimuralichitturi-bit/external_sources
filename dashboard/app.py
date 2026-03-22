@@ -204,10 +204,18 @@ def render_sidebar(snap_df: pd.DataFrame, est_df: pd.DataFrame):
         if locs:
             locations = st.sidebar.multiselect("Blinkit Locations", options=sorted(locs), default=sorted(locs))
 
+    # Category filter
+    categories = []
+    if not snap_df.empty and "category" in snap_df.columns:
+        cats = sorted(snap_df["category"].dropna().unique().tolist())
+        cats = [c for c in cats if c and c != "nan"]
+        if cats:
+            categories = st.sidebar.multiselect("Categories", options=cats, default=[])
+
     st.sidebar.markdown("---")
     st.sidebar.caption("Data refreshes every 10 min from Cloudflare R2")
 
-    return sel_platforms, start_date, end_date, locations
+    return sel_platforms, start_date, end_date, locations, categories
 
 
 # ── Tab: Overview ─────────────────────────────────────────────────────────────
@@ -593,6 +601,90 @@ def tab_brands(brand_df: pd.DataFrame, est_df: pd.DataFrame, platforms: list):
     st.dataframe(disp, use_container_width=True, hide_index=True)
 
 
+# ── Tab: Categories ───────────────────────────────────────────────────────────
+
+def tab_categories(snap_df: pd.DataFrame, platforms: list):
+    st.header("Category Intelligence")
+
+    if snap_df.empty or "category" not in snap_df.columns:
+        st.info("No categorized data yet.")
+        return
+
+    df = snap_df[snap_df["platform"].isin(platforms)].copy()
+    df["category"] = df["category"].fillna("Uncategorized")
+
+    # Category breakdown bar
+    st.subheader("Products per Category")
+    cat_plat = (
+        df.groupby(["category", "platform"])["product_id"]
+        .count()
+        .reset_index()
+        .rename(columns={"product_id": "count"})
+    )
+    fig = px.bar(
+        cat_plat.sort_values("count", ascending=False),
+        x="category", y="count",
+        color="platform", color_discrete_map=PLATFORM_COLORS,
+        barmode="stack",
+        labels={"count": "Products", "category": "Category"},
+    )
+    fig.update_layout(height=420, margin=dict(t=10, b=100), xaxis_tickangle=-35)
+    st.plotly_chart(fig, use_container_width=True)
+
+    c1, c2 = st.columns(2)
+
+    # Treemap
+    with c1:
+        st.subheader("Category Share — Treemap")
+        cat_totals = df.groupby("category")["product_id"].count().reset_index()
+        cat_totals.columns = ["category", "count"]
+        fig2 = px.treemap(
+            cat_totals, path=["category"], values="count",
+            color="count", color_continuous_scale="Blues",
+        )
+        fig2.update_layout(height=380, margin=dict(t=10, b=10))
+        st.plotly_chart(fig2, use_container_width=True)
+
+    # Avg price per category
+    with c2:
+        st.subheader("Avg Price by Category")
+        df["price"] = pd.to_numeric(df["price"], errors="coerce")
+        avg_price = (
+            df.groupby("category")["price"]
+            .mean().dropna().reset_index()
+            .rename(columns={"price": "avg_price"})
+            .sort_values("avg_price", ascending=True)
+        )
+        fig3 = px.bar(
+            avg_price, x="avg_price", y="category", orientation="h",
+            labels={"avg_price": "Avg Price (Rs.)", "category": ""},
+            color="avg_price", color_continuous_scale="Oranges",
+        )
+        fig3.update_layout(height=380, margin=dict(t=10, b=10))
+        st.plotly_chart(fig3, use_container_width=True)
+
+    # Drill-down table
+    st.subheader("Drill-down by Category")
+    sel_cat = st.selectbox("Select category", sorted(df["category"].unique()))
+    cat_df  = df[df["category"] == sel_cat]
+
+    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+    kpi1.metric("Products",  f"{cat_df['product_id'].nunique():,}")
+    kpi2.metric("Brands",    f"{cat_df['brand'].nunique():,}")
+    price_col = pd.to_numeric(cat_df["price"], errors="coerce")
+    kpi3.metric("Avg Price", f"Rs. {price_col.mean():.0f}" if not price_col.isna().all() else "—")
+    disc_col = pd.to_numeric(cat_df.get("discount_pct", pd.Series(dtype=float)), errors="coerce")
+    kpi4.metric("Avg Discount", f"{disc_col.mean():.1f}%" if not disc_col.isna().all() else "—")
+
+    top_brands = (
+        cat_df.groupby(["brand", "platform"])["product_id"]
+        .count().reset_index()
+        .rename(columns={"product_id": "products"})
+        .sort_values("products", ascending=False).head(20)
+    )
+    st.dataframe(top_brands, use_container_width=True, hide_index=True)
+
+
 # ── Tab: Raw Data ─────────────────────────────────────────────────────────────
 
 def tab_raw(snap_df: pd.DataFrame, est_df: pd.DataFrame, brand_df: pd.DataFrame, platforms: list):
@@ -637,28 +729,35 @@ def main():
         )
 
     # Sidebar
-    platforms, start_date, end_date, locations = render_sidebar(snap_df, est_df)
+    platforms, start_date, end_date, locations, categories = render_sidebar(snap_df, est_df)
+
+    # Apply category filter if selected
+    if categories and not snap_df.empty and "category" in snap_df.columns:
+        snap_df = snap_df[snap_df["category"].isin(categories)]
 
     # Tab navigation
-    tab_names = ["Overview", "Inventory", "Pricing", "Sales Estimates", "Brands", "Raw Data"]
+    tab_names = ["Overview", "Categories", "Inventory", "Pricing", "Sales Estimates", "Brands", "Raw Data"]
     tabs = st.tabs(tab_names)
 
     with tabs[0]:
         tab_overview(snap_df, est_df, brand_df, platforms)
 
     with tabs[1]:
-        tab_inventory(snap_df, platforms, locations, start_date, end_date)
+        tab_categories(snap_df, platforms)
 
     with tabs[2]:
-        tab_pricing(snap_df, platforms, start_date, end_date)
+        tab_inventory(snap_df, platforms, locations, start_date, end_date)
 
     with tabs[3]:
-        tab_sales(est_df, brand_df, platforms)
+        tab_pricing(snap_df, platforms, start_date, end_date)
 
     with tabs[4]:
-        tab_brands(brand_df, est_df, platforms)
+        tab_sales(est_df, brand_df, platforms)
 
     with tabs[5]:
+        tab_brands(brand_df, est_df, platforms)
+
+    with tabs[6]:
         tab_raw(snap_df, est_df, brand_df, platforms)
 
     # Footer

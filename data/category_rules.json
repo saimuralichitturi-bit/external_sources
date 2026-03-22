@@ -1,0 +1,203 @@
+{
+  "Electronics": {
+    "platform_categories": [
+      "Handset", "Smart Watches", "Laptop", "Tablet", "Headphone", "Camera",
+      "Television", "Speaker", "Computer", "Keyboard", "Mouse", "Monitor",
+      "Printer", "Router", "Powerbank", "Charger", "Cable", "SmartWatch",
+      "WirelessEarphone", "BluetoothSpeaker", "ActionCamera"
+    ],
+    "keywords": [
+      "mobile", "phone", "smartphone", "laptop", "tablet", "ipad", "headphone",
+      "earphone", "earbuds", "charger", "cable", "tv ", "television", "speaker",
+      "camera", "smartwatch", "computer", "electronics", "power bank", "powerbank",
+      "router", "wifi", "bluetooth", "usb", "hard disk", "ssd", "ram", "processor",
+      "monitor", "keyboard", "mouse", "printer", "projector", "drone", "gopro",
+      "nothing phone", "oneplus", "samsung galaxy", "iphone", "realme", "redmi",
+      "poco", "vivo", "oppo", "motorola", "nokia", "apple watch", "boat ", "noise "
+    ]
+  },
+  "Fashion - Clothing": {
+    "platform_categories": [
+      "Kurtas", "Tshirts", "Tops", "Trousers", "Jeans", "Dresses", "Jackets",
+      "MensTShirt", "Nehru Jackets", "Sarees", "Kurta Sets", "Lounge Tshirts",
+      "Bra", "Core", "Shirts", "Shorts", "Leggings", "Skirts", "Suits",
+      "Blazers", "Sweaters", "Hoodies", "Ethnic Sets", "Salwar Suits",
+      "Dungarees", "Jumpsuits", "Nightwear", "Innerwear", "Lingerie",
+      "Shapewear", "Kurtis", "Patiala", "Anarkali", "Lehenga", "Sherwani",
+      "Dhoti", "Lungis", "Track Pants", "Joggers", "Sweatshirts"
+    ],
+    "keywords": [
+      "tshirt", "t-shirt", "shirt", "kurta", "kurti", "jeans", "trouser",
+      "dress", "jacket", "saree", "top ", "blouse", "legging", "skirt",
+      "suit", "ethnic", "salwar", "anarkali", "lehenga", "sherwani",
+      "hoodie", "sweatshirt", "sweater", "blazer", "coat", "shorts",
+      "bermuda", "track pant", "jogger", "nightwear", "innerwear",
+      "bra ", "brief", "boxer", "lingerie", "pajama", "dungaree", "jumpsuit"
+    ]
+  },
+  "Fashion - Footwear": {
+    "platform_categories": [
+      "Casual Shoes", "Sports Shoes", "Heels", "Sandals", "Sneakers",
+      "Formal Shoes", "Flats", "Boots", "Loafers", "Moccasins",
+      "Flip Flops", "Slippers", "Wedges", "Platforms"
+    ],
+    "keywords": [
+      "shoes", "sneakers", "sandals", "heels", "boots", "footwear",
+      "chappal", "loafer", "slipper", "flip flop", "wedge", "flat ",
+      "moccasin", "running shoe", "sports shoe", "casual shoe", "formal shoe"
+    ]
+  },
+  "Fashion - Accessories": {
+    "platform_categories": [
+      "Sunglasses", "Watch", "Watches", "UnisexBags", "Trolley Bag",
+      "Saree Accessories", "Handbags", "Wallets", "Belts", "Caps",
+      "Hats", "Scarves", "Stoles", "Jewellery", "Necklaces",
+      "Earrings", "Bracelets", "Rings", "Clutches", "Backpacks",
+      "Laptop Bags", "Travel Bags", "Sling Bags"
+    ],
+    "keywords": [
+      "sunglasses", "watch ", "watches", "bag ", "wallet", "belt ",
+      "cap ", "hat ", "jewellery", "jewelry", "necklace", "earring",
+      "bracelet", "ring ", "clutch", "backpack", "trolley", "sling bag",
+      "handbag", "purse", "scarf", "stole", "dupatta", "tie ", "cufflink"
+    ]
+  },
+  "Food & Grocery": {
+    "platform_categories": [
+      "Snacks & Munchies", "Cold Drinks & Juices", "Dairy, Bread & Eggs",
+      "Bakery & Biscuits", "Atta, Rice, Oil & Dals", "Masala, Oil & More",
+      "Sauces & Spreads", "Breakfast & Instant Food", "Tea, Coffee & Health Drinks",
+      "Sweet Tooth", "Organic & Premium", "Vegetables & Fruits",
+      "Chicken, Meat & Fish", "NutsDryFruits", "Grocery", "Food",
+      "Masala", "Rice & Grains", "Oils & Ghee"
+    ],
+    "keywords": [
+      "chips", "biscuit", "cookie", "chocolate", "snack", "juice", "drink ",
+      "milk ", "bread ", "rice ", "atta ", "dal ", "masala", "spice", " oil",
+      "tea ", "coffee", "noodle", "pasta", "sauce", "ketchup", "jam ",
+      "pickle", "dry fruit", "nuts ", "oats", "cornflake", "candy", "sweet ",
+      "sugar", "salt ", "flour", "ghee", "butter", "paneer", "cheese",
+      "egg ", "chicken", "mutton", "fish ", "prawn", "fruits", "vegetable",
+      "tomato", "onion", "potato", "energy bar", "protein bar", "granola",
+      "cereal", "honey", "vinegar", "spread", "peanut butter", "mayonnaise",
+      "namkeen", "mathri", "chakli", "soan papdi", "ladoo", "halwa",
+      "poha", "upma", "idli", "dosa", "biryani", "maggi", "yippee",
+      "pepsi", "coca cola", "7up", "sprite", "mountain dew", "red bull",
+      "maaza", "frooti", "real juice", "tropicana", "amul", "mother dairy"
+    ]
+  },
+  "Health & Wellness": {
+    "platform_categories": [
+      "Pharma & Wellness", "ProteinSupplement", "Ayurveda",
+      "Vitamins & Supplements", "Health Drinks", "Medical Devices",
+      "Health & Personal Care"
+    ],
+    "keywords": [
+      "protein powder", "whey protein", "mass gainer", "creatine", "bcaa",
+      "supplement", "vitamin", "medicine", "tablet ", "capsule", "syrup",
+      "probiotic", "collagen", "multivitamin", "ayurvedic", "immunity",
+      "omega", "fish oil", "calcium", "iron ", "zinc ", "biotin",
+      "weight loss", "fat burner", "pre-workout", "post-workout",
+      "glucosamine", "melatonin", "ashwagandha", "triphala", "chyawanprash",
+      "health drink", "pediasure", "ensure", "horlicks", "complan", "bournvita",
+      "glucon-d", "glucon d", "electral", "ors ", "dettol", "savlon",
+      "hand sanitizer", "face mask", "oximeter", "thermometer", "bp monitor",
+      "diabetic", "insulin", "inhaler", "bandage", "antiseptic"
+    ]
+  },
+  "Beauty & Personal Care": {
+    "platform_categories": [
+      "Personal Care & Beauty", "Cleaning Essentials", "Skincare",
+      "Haircare", "Makeup", "Fragrances", "Men Grooming", "Oral Care"
+    ],
+    "keywords": [
+      "shampoo", "conditioner", "face wash", "moisturizer", "cream ",
+      "lotion", "serum", "sunscreen", "spf", "lipstick", "makeup",
+      "foundation", "mascara", "perfume", "deodorant", "deo ", "soap ",
+      "body wash", "toothpaste", "hair oil", "hair color", "kajal",
+      "eyeliner", "blush", "highlighter", "concealer", "primer",
+      "toner", "cleanser", "face pack", "face mask", "scrub", "exfoliate",
+      "nail polish", "nail paint", "lip balm", "lip gloss", "eye shadow",
+      "setting spray", "bb cream", "cc cream", "micellar", "rose water",
+      "beard oil", "shaving", "razor", "after shave", "trimmer",
+      "hair gel", "hair spray", "hair serum", "dandruff", "head & shoulders",
+      "dove ", "loreal", "himalaya", "biotique", "mamaearth", "plum ",
+      "minimalist", "cetaphil", "neutrogena", "lakme", "maybelline",
+      "nykaa", "mcaffeine", "forest essentials", "kama ayurveda",
+      "body lotion", "hand cream", "foot cream", "eye cream",
+      "detergent", "dishwash", "toilet cleaner", "floor cleaner",
+      "surface cleaner", "harpic", "lizol", "colin ", "vim ", "ariel",
+      "surf excel", "tide ", "nirma ", "rin "
+    ]
+  },
+  "Sports & Fitness": {
+    "platform_categories": [
+      "Sports", "Sports Shoes", "Gym Equipment", "Fitness Accessories",
+      "Yoga", "Cycling", "Swimming", "Cricket", "Football", "Badminton"
+    ],
+    "keywords": [
+      "gym", "fitness", "yoga", "sports ", "running", "cycling",
+      "swimming", "cricket", "football", "tennis", "badminton",
+      "dumbbell", "barbell", "weight plate", "resistance band",
+      "treadmill", "cycle", "skipping rope", "yoga mat", "foam roller",
+      "pull up", "push up", "jump rope", "kettlebell", "protein shake"
+    ]
+  },
+  "Home & Kitchen": {
+    "platform_categories": [
+      "Home & Office", "BedRoomLF", "Kitchen", "Cookware", "Home Decor",
+      "Bedding", "Furniture", "Lighting", "Storage", "Tools & Hardware",
+      "Gardening", "Stationery", "ArtsAndCraft"
+    ],
+    "keywords": [
+      "kitchen", "cookware", "pressure cooker", "frying pan", "kadai",
+      "tawa ", "utensil", "plate ", "glass ", "cup ", "bowl ", "spoon",
+      "fork ", "knife", "chopper", "mixer", "grinder", "juicer",
+      "microwave", "oven ", "toaster", "induction", "air fryer",
+      "refrigerator", "washing machine", "vacuum cleaner", "iron ",
+      "bedsheet", "pillow", "cushion", "blanket", "comforter", "towel",
+      "curtain", "lamp", "bulb ", "led ", "furniture", "shelf", "rack",
+      "storage box", "organizer", "hangers", "dustbin", "mop ", "broom",
+      "tissue paper", "garbage bag", "aluminium foil", "cling wrap",
+      "water bottle", "thermos", "flask", "lunch box", "tiffin",
+      "candle", "incense", "agarbatti", "pooja", "idol", "photo frame",
+      "wall art", "painting", "clock", "mirror", "vase", "plant",
+      "pen ", "notebook", "diary", "stapler", "scissors", "tape ",
+      "glue ", "crayon", "color", "sketch", "paint brush", "canvas"
+    ]
+  },
+  "Baby & Kids": {
+    "platform_categories": [
+      "Baby Care", "Kids Fashion", "Toys", "Baby Food", "Baby Gear"
+    ],
+    "keywords": [
+      "baby ", "diaper", "nappy", "infant", "toddler", "kids ",
+      "child", "toy ", "rattle", "teether", "stroller", "pram",
+      "baby food", "baby oil", "baby shampoo", "baby lotion",
+      "baby powder", "baby wipe", "wet wipe", "feeding bottle",
+      "sippy cup", "crayon", "lego", "barbie", "hot wheels",
+      "play", "nursery", "junior", "huggies", "pampers", "mamy poko"
+    ]
+  },
+  "Books & Education": {
+    "platform_categories": [
+      "Book", "Books", "Stationery", "Educational"
+    ],
+    "keywords": [
+      "book ", "novel", "textbook", "story ", "fiction", "biography",
+      "literature", "notebook ", "diary ", "journal", "comic",
+      "magazine", "encyclopedia", "dictionary", "atlas", "guide ",
+      "preparation", "upsc", "jee", "neet", "cbse", "ncert"
+    ]
+  },
+  "Pets": {
+    "platform_categories": [
+      "Pet Care", "Dog Food", "Cat Food", "Pet Accessories"
+    ],
+    "keywords": [
+      "dog ", "cat ", "pet ", "pedigree", "whiskas", "drools",
+      "royal canin", "puppy", "kitten", "fish food", "bird food",
+      "pet shampoo", "pet collar", "leash", "pet toy", "litter"
+    ]
+  }
+}

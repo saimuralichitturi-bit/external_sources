@@ -275,6 +275,17 @@ def run(data_dir: str, out_dir: str):
     print(f"  unified_brands.csv     -> {len(brand_df):,} rows")
 
     print("Consolidation complete.")
+
+    # Auto-categorize using rules JSON
+    rules_path = os.path.join(os.path.dirname(__file__), "..", "data", "category_rules.json")
+    if os.path.exists(rules_path):
+        try:
+            sys.path.insert(0, os.path.dirname(__file__))
+            from categorize import categorize
+            categorize(out_dir, rules_path)
+        except Exception as e:
+            print(f"  [warn] categorize step failed: {e}")
+
     return snap_path, est_path, brand_path
 
 
