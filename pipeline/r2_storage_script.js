@@ -1,4 +1,4 @@
-const API_KEY = "sai-r2-secret-2026";
+const API_KEY = "sai-r2-1062999-2026";
 
 export default {
   async fetch(request, env) {
