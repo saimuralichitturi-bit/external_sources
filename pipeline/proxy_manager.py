@@ -32,12 +32,6 @@ except ImportError:
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-PROXYSCRAPE_URL = (
-    "https://api.proxyscrape.com/v2/"
-    "?request=getproxies&protocol=http&timeout=5000"
-    "&country=all&ssl=all&anonymity=elite"
-)
-
 _pool: list[str] = []          # "ip:port" strings
 _failed: set[str] = set()
 _idx = 0
@@ -46,17 +40,6 @@ _last_refresh = 0.0
 
 
 # ── Pool management ───────────────────────────────────────────────────────────
-
-def _fetch_proxyscrape() -> list[str]:
-    try:
-        import requests
-        r = requests.get(PROXYSCRAPE_URL, timeout=15)
-        proxies = [line.strip() for line in r.text.splitlines() if ":" in line.strip()]
-        print(f"  [proxy] fetched {len(proxies)} proxies from ProxyScrape")
-        return proxies
-    except Exception as e:
-        print(f"  [proxy] ProxyScrape fetch failed: {e}")
-        return []
 
 
 def _load_from_env_or_file() -> list[str]:
@@ -76,15 +59,16 @@ def _load_from_env_or_file() -> list[str]:
 def _refresh():
     global _pool, _failed, _idx, _last_refresh
     proxies = _load_from_env_or_file()
+    # Only use proxies if explicitly configured — free public proxies are too unreliable
     if not proxies:
-        proxies = _fetch_proxyscrape()
-    # Shuffle to spread load
+        print("  [proxy] no PROXY_LIST or proxies.txt found — running direct (no proxy)")
     random.shuffle(proxies)
     _pool = proxies
     _failed.clear()
     _idx = 0
     _last_refresh = time.time()
-    print(f"  [proxy] pool loaded: {len(_pool)} proxies")
+    if proxies:
+        print(f"  [proxy] pool loaded: {len(_pool)} proxies")
 
 
 def _ensure_pool():
