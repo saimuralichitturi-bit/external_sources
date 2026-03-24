@@ -4,12 +4,23 @@ myntra_core.py — Shared utilities for all Myntra scrapers
 import re, time, json, csv, os
 from datetime import datetime
 
+import sys, os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
 try:
     from curl_cffi import requests as cf_requests
     CURL_OK = True
 except ImportError:
     import requests as cf_requests
     CURL_OK = False
+
+try:
+    from pipeline.proxy_manager import get_proxy, mark_failed as mark_proxy_failed
+    PROXY_OK = True
+except ImportError:
+    PROXY_OK = False
+    def get_proxy(): return None
+    def mark_proxy_failed(_): pass
 
 # ── Session (reused across all modules) ───────────────────────────────────────
 _session = None
@@ -43,33 +54,36 @@ REVIEWS_TO_RATINGS     = 0.15   # ~15% of raters also write a review
 
 # ── HTTP helpers ──────────────────────────────────────────────────────────────
 def _reset_session():
-    """Force a new session and re-warm cookies."""
     global _session
     _session = None
-    time.sleep(5)
+    time.sleep(3)
     get_session()
 
 
 def get(url: str, referer: str = "https://www.myntra.com/", timeout=20) -> dict | None:
     for attempt in range(1, 4):
+        proxy = get_proxy()
         session = get_session()
         headers = {**BASE_HEADERS, "Referer": referer}
         try:
-            r = session.get(url, headers=headers, timeout=timeout)
+            r = session.get(url, headers=headers, timeout=timeout, proxies=proxy)
             if r.status_code == 200:
                 try:
                     return r.json()
                 except Exception:
                     preview = r.text[:120].replace('\n', ' ')
-                    print(f"  Non-JSON response (bot-blocked), attempt {attempt}/3: {preview}")
+                    print(f"  Non-JSON (bot-blocked), attempt {attempt}/3: {preview}")
+                    mark_proxy_failed(proxy)
                     _reset_session()
-                    time.sleep(10 * attempt)
+                    time.sleep(5 * attempt)
                     continue
-            print(f"  HTTP {r.status_code}: {url}")
-            return None
+            mark_proxy_failed(proxy)
+            print(f"  HTTP {r.status_code} (attempt {attempt}/3): {url}")
+            time.sleep(3 * attempt)
         except Exception as e:
+            mark_proxy_failed(proxy)
             print(f"  HTTP error (attempt {attempt}/3): {e}")
-            time.sleep(5 * attempt)
+            time.sleep(3 * attempt)
     return None
 
 # ── Search API ────────────────────────────────────────────────────────────────

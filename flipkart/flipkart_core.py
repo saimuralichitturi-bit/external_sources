@@ -21,12 +21,23 @@ Key JSON paths on PDP:
 import re, csv, os, time, random, json
 from datetime import datetime
 
+import sys
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
 try:
     from curl_cffi import requests as cf_requests
     CURL_OK = True
 except ImportError:
     import requests as cf_requests
     CURL_OK = False
+
+try:
+    from pipeline.proxy_manager import get_proxy, mark_failed as mark_proxy_failed
+    PROXY_OK = True
+except ImportError:
+    PROXY_OK = False
+    def get_proxy(): return None
+    def mark_proxy_failed(_): pass
 
 # ── Session ────────────────────────────────────────────────────────────────────
 _session = None
@@ -52,17 +63,23 @@ def _headers(referer="https://www.flipkart.com/"):
     }
 
 def get_html(url: str, referer="https://www.flipkart.com/", timeout=20) -> str | None:
-    try:
-        r = get_session().get(url, headers=_headers(referer), timeout=timeout)
-        if r.status_code == 200:
-            return r.text
-        if r.status_code == 503:
-            print(f"  [503] blocked, backing off 10s")
-            time.sleep(10)
-        else:
-            print(f"  HTTP {r.status_code}: {url}")
-    except Exception as e:
-        print(f"  HTTP error: {e}")
+    for attempt in range(1, 4):
+        proxy = get_proxy()
+        try:
+            r = get_session().get(url, headers=_headers(referer), timeout=timeout, proxies=proxy)
+            if r.status_code == 200:
+                return r.text
+            mark_proxy_failed(proxy)
+            if r.status_code in (503, 403):
+                print(f"  [{r.status_code}] blocked (attempt {attempt}/3), rotating proxy...")
+                time.sleep(3 * attempt)
+            else:
+                print(f"  HTTP {r.status_code}: {url}")
+                return None
+        except Exception as e:
+            mark_proxy_failed(proxy)
+            print(f"  HTTP error (attempt {attempt}/3): {e}")
+            time.sleep(3 * attempt)
     return None
 
 def delay(lo=2.0, hi=5.0):
