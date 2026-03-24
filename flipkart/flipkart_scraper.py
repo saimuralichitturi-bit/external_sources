@@ -400,9 +400,22 @@ def run_from_snapshots(filepath: str, out_dir: str):
 
 # ── CLI ────────────────────────────────────────────────────────────────────────
 
+ALL_CATEGORIES = [
+    "protein powder", "vitamins", "electronics", "laptop", "smartphone",
+    "headphones", "speakers", "camera", "watch", "shoes",
+    "tshirts", "jeans", "kurta", "saree", "dress",
+    "home decor", "kitchen appliances", "cookware", "bedsheets", "furniture",
+    "toys", "books", "stationery", "pet food", "baby products",
+    "face wash", "shampoo", "sunscreen", "perfume", "hair oil",
+    "running shoes", "cricket bat", "yoga mat", "cycling", "gym equipment",
+    "chips", "coffee", "tea", "dry fruits", "cooking oil",
+]
+
+
 def main():
     parser = argparse.ArgumentParser(description="Flipkart scraper + sales estimator")
     parser.add_argument("--keywords",       type=str)
+    parser.add_argument("--all-categories", action="store_true", help="Scrape all predefined categories")
     parser.add_argument("--pids",           type=str, help="Comma-separated PIDs for direct PDP fetch")
     parser.add_argument("--detail",         action="store_true", help="Fetch PDP for top-N products")
     parser.add_argument("--top",            type=int, default=20)
@@ -416,11 +429,15 @@ def main():
         run_from_snapshots(args.from_snapshots, args.out_dir)
         return
 
-    pids     = [p.strip() for p in args.pids.split(",")     if p.strip()] if args.pids     else []
-    keywords = [k.strip() for k in args.keywords.split(",") if k.strip()] if args.keywords else []
+    pids = [p.strip() for p in args.pids.split(",") if p.strip()] if args.pids else []
+
+    if args.all_categories:
+        keywords = ALL_CATEGORIES
+    else:
+        keywords = [k.strip() for k in args.keywords.split(",") if k.strip()] if args.keywords else []
 
     if not keywords and not pids:
-        parser.error("Provide --keywords, --pids, or --from-snapshots")
+        parser.error("Provide --keywords, --all-categories, --pids, or --from-snapshots")
 
     run(keywords=keywords, fetch_detail=args.detail,
         top_n=args.top, pids=pids, out_dir=args.out_dir)

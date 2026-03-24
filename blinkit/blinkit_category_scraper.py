@@ -110,61 +110,8 @@ NEW_FILE     = os.path.join(_DATA_DIR, "blinkit_category_new_products.csv")
 
 # ── Scraper ───────────────────────────────────────────────────────────────────
 def scrape_category(cat_id: int, headers: dict, max_pages=20, delay=0.6) -> list[dict]:
-    """Scrape all products from a category using listing endpoint."""
-    all_products = []
-    global_pos = 1
-    cat_name = CATEGORIES.get(cat_id, f"Category {cat_id}")
-
-    # Try multiple URL patterns for category browse
-    url_patterns = [
-        f"https://blinkit.com/v1/layout/listing?l0_cat={cat_id}&offset={{offset}}&limit=24",
-        f"https://blinkit.com/v2/listing?l0_cat_id={cat_id}&offset={{offset}}&limit=24",
-        f"https://blinkit.com/v1/layout/category?l0_cat={cat_id}&offset={{offset}}&limit=24",
-    ]
-
-    working_pattern = None
-
-    for page in range(max_pages):
-        offset = page * 24
-        got_results = False
-
-        patterns_to_try = [url_patterns[0].format(offset=offset)] if working_pattern \
-            else [p.format(offset=offset) for p in url_patterns]
-
-        for url in patterns_to_try:
-            data = post(url, headers)
-            if not data:
-                continue
-            snippets = data.get("response", {}).get("snippets", [])
-            if snippets:
-                working_pattern = url.split("?")[0] + "?" + url.split("?")[1].replace(str(offset), "{offset}")
-                page_products = []
-                for s in snippets:
-                    p = parse_snippet(s, global_pos)
-                    if p:
-                        p["category_id"] = cat_id
-                        p["category_name"] = cat_name
-                        page_products.append(p)
-                        global_pos += 1
-                all_products.extend(page_products)
-                got_results = True
-
-                if len(snippets) < 24:
-                    print(f"  {cat_name}: {len(all_products)} products (last page at {page+1})")
-                    return all_products
-                break
-
-        if not got_results:
-            if page == 0:
-                # Try search-based fallback for category
-                print(f"  {cat_name}: listing endpoint failed, trying search fallback...")
-                return scrape_category_via_search(cat_id, headers)
-            break
-
-        time.sleep(delay)
-
-    print(f"  {cat_name}: {len(all_products)} products ({page+1} pages)")
-    return all_products
+    """Scrape all products in a category via search (listing endpoints are dead)."""
+    return scrape_category_via_search(cat_id, headers)
 
 
 def scrape_category_via_search(cat_id: int, headers: dict) -> list[dict]:
@@ -200,22 +147,33 @@ def scrape_category_via_search(cat_id: int, headers: dict) -> list[dict]:
     all_products = []
     seen_ids = set()
 
-    for term in terms[:2]:  # limit to 2 terms per category
-        url = f"https://blinkit.com/v1/layout/search?q={term.replace(' ', '+')}&search_type=type_to_search&offset=0&limit=24"
-        data = post(url, headers)
-        if not data:
-            continue
-        snippets = data.get("response", {}).get("snippets", [])
-        pos = len(all_products) + 1
-        for s in snippets:
-            p = parse_snippet(s, pos)
-            if p and p["product_id"] not in seen_ids:
-                p["category_id"] = cat_id
-                p["category_name"] = cat_name
-                all_products.append(p)
-                seen_ids.add(p["product_id"])
-                pos += 1
-        time.sleep(0.5)
+    for term in terms:
+        offset = 0
+        while True:
+            url = (
+                f"https://blinkit.com/v1/layout/search"
+                f"?q={term.replace(' ', '+')}"
+                f"&search_type=type_to_search&offset={offset}&limit=24"
+            )
+            data = post(url, headers)
+            if not data:
+                break
+            snippets = data.get("response", {}).get("snippets", [])
+            if not snippets:
+                break
+            pos = len(all_products) + 1
+            for s in snippets:
+                p = parse_snippet(s, pos)
+                if p and p["product_id"] not in seen_ids:
+                    p["category_id"] = cat_id
+                    p["category_name"] = cat_name
+                    all_products.append(p)
+                    seen_ids.add(p["product_id"])
+                    pos += 1
+            if len(snippets) < 24:
+                break
+            offset += 24
+            time.sleep(0.3)
 
     return all_products
 

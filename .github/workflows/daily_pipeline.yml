@@ -41,13 +41,11 @@ jobs:
             python3 myntra/myntra_sales_estimator.py \
               --all-categories --out-dir data &
 
-            # Amazon — discover all ASINs via sitemap, then scrape details
-            python3 amazon/amazon_sitemap.py --all --out-dir data
-            python3 amazon/amazon_scraper.py --from-snapshots --out-dir data &
+            # Amazon — all predefined categories
+            python3 amazon/amazon_scraper.py --all-categories --out-dir data &
 
-            # Flipkart — discover all PIDs via sitemap, then scrape details
-            python3 flipkart/flipkart_sitemap.py --all --out-dir data
-            python3 flipkart/flipkart_scraper.py --from-snapshots --out-dir data &
+            # Flipkart — all predefined categories
+            python3 flipkart/flipkart_scraper.py --all-categories --out-dir data &
 
             # Wait for all background jobs to finish
             wait

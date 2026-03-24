@@ -42,22 +42,34 @@ FASHION_RETURN_RATE    = 0.30   # ~30% average return rate on Myntra apparel
 REVIEWS_TO_RATINGS     = 0.15   # ~15% of raters also write a review
 
 # ── HTTP helpers ──────────────────────────────────────────────────────────────
+def _reset_session():
+    """Force a new session and re-warm cookies."""
+    global _session
+    _session = None
+    time.sleep(5)
+    get_session()
+
+
 def get(url: str, referer: str = "https://www.myntra.com/", timeout=20) -> dict | None:
-    session = get_session()
-    headers = {**BASE_HEADERS, "Referer": referer}
-    try:
-        r = session.get(url, headers=headers, timeout=timeout)
-        if r.status_code == 200:
-            try:
-                return r.json()
-            except Exception:
-                # Server returned HTML (captcha/block page) instead of JSON
-                preview = r.text[:120].replace('\n', ' ')
-                print(f"  Non-JSON response (likely bot-blocked): {preview}")
-                return None
-        print(f"  HTTP {r.status_code}: {url}")
-    except Exception as e:
-        print(f"  HTTP error: {e}")
+    for attempt in range(1, 4):
+        session = get_session()
+        headers = {**BASE_HEADERS, "Referer": referer}
+        try:
+            r = session.get(url, headers=headers, timeout=timeout)
+            if r.status_code == 200:
+                try:
+                    return r.json()
+                except Exception:
+                    preview = r.text[:120].replace('\n', ' ')
+                    print(f"  Non-JSON response (bot-blocked), attempt {attempt}/3: {preview}")
+                    _reset_session()
+                    time.sleep(10 * attempt)
+                    continue
+            print(f"  HTTP {r.status_code}: {url}")
+            return None
+        except Exception as e:
+            print(f"  HTTP error (attempt {attempt}/3): {e}")
+            time.sleep(5 * attempt)
     return None
 
 # ── Search API ────────────────────────────────────────────────────────────────
