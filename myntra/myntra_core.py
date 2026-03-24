@@ -76,13 +76,17 @@ def search_page(keyword: str, page: int = 1, rows: int = 50) -> tuple[list[dict]
     products = [p for p in products if p]
     return products, data.get("hasNextPage", False)
 
-def search_all_pages(keyword: str, max_pages: int = 5, delay: float = 0.5) -> list[dict]:
+def search_all_pages(keyword: str, max_pages: int = None, delay: float = 0.5) -> list[dict]:
     all_products = []
-    for page in range(1, max_pages + 1):
+    page = 1
+    while True:
         products, has_next = search_page(keyword, page=page)
         all_products.extend(products)
         if not has_next:
             break
+        if max_pages and page >= max_pages:
+            break
+        page += 1
         time.sleep(delay)
     return all_products
 

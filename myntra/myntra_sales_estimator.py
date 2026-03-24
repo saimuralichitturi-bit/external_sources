@@ -23,6 +23,23 @@ from myntra_core import (
     RATING_CONVERSION_RATE, FASHION_RETURN_RATE,
 )
 
+# ── All-categories keyword list ───────────────────────────────────────────────
+ALL_CATEGORIES = [
+    # Men
+    "tshirts", "shirts", "jeans", "trousers", "shorts", "kurta men",
+    "jacket men", "sweatshirt", "hoodie", "blazer", "suit men",
+    # Women
+    "tops", "dress", "saree", "kurta women", "lehenga", "salwar",
+    "skirts", "leggings", "jacket women", "ethnic wear",
+    # Footwear
+    "sneakers", "sandals", "heels", "boots", "loafers", "sports shoes",
+    # Accessories
+    "bags", "handbags", "backpacks", "wallets", "belts",
+    "watches", "sunglasses", "jewelry",
+    # Sports & Innerwear
+    "sports wear", "innerwear men", "innerwear women", "socks",
+]
+
 # ── Model constants ───────────────────────────────────────────────────────────
 RANK_DECAY         = 0.12    # power-law rank decay (softer than Blinkit — wider catalogue)
 RANK_BASE_SALES    = 200     # estimated daily units at rank 1 (flagship keyword)
@@ -281,8 +298,10 @@ def main():
     ap = argparse.ArgumentParser(description="Myntra multi-signal sales estimator")
     ap.add_argument("--keywords",       default="tshirts",
                     help="Comma-separated search keywords (default: tshirts)")
-    ap.add_argument("--pages",          type=int, default=3,
-                    help="Pages per keyword to fetch (50 products/page)")
+    ap.add_argument("--all-categories", action="store_true",
+                    help="Scrape all predefined fashion categories (ignores --keywords)")
+    ap.add_argument("--pages",          type=int, default=None,
+                    help="Max pages per keyword (default: all pages until exhausted)")
     ap.add_argument("--detail",         action="store_true",
                     help="Fetch product detail API for exact inventory + urgency signals")
     ap.add_argument("--from-snapshots", metavar="FILE",
@@ -304,7 +323,10 @@ def main():
         run(keywords=keywords, pages=0, fetch_detail=False,
             from_snapshots=args.from_snapshots, out_dir=args.out_dir)
     else:
-        keywords = [k.strip() for k in args.keywords.split(",") if k.strip()]
+        if args.all_categories:
+            keywords = ALL_CATEGORIES
+        else:
+            keywords = [k.strip() for k in args.keywords.split(",") if k.strip()]
         run(keywords=keywords, pages=args.pages, fetch_detail=args.detail,
             from_snapshots=None, out_dir=args.out_dir)
 

@@ -10,6 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
 
+    env:
+      R2_WORKER_URL: ${{ secrets.R2_WORKER_URL }}
+      R2_API_KEY: ${{ secrets.R2_API_KEY }}
+
     steps:
       - name: SSH into Oracle VM and run all pipelines
         uses: appleboy/ssh-action@v1.0.0
@@ -18,8 +22,9 @@ jobs:
           username: ubuntu
           key: ${{ secrets.ORACLE_SSH_KEY }}
           timeout: 110m
+          envs: R2_WORKER_URL,R2_API_KEY
           script: |
-            cd /home/ubuntu/scraper
+            cd /home/ubuntu/external_sources
 
             # Pull latest code from GitHub
             git pull origin main
@@ -27,48 +32,27 @@ jobs:
             # Install/update dependencies
             pip3 install -r requirements.txt --user --quiet
 
-            # Run all scrapers in parallel
-            python3 blinkit/blinkit_sales_estimator.py \
-              --keywords "chips,protein powder,cold drinks,snacks,dairy" \
-              --all-locations &
+            # Blinkit — all categories across all locations
+            for loc in vijayawada mumbai bangalore delhi hyderabad chennai pune; do
+              python3 blinkit/blinkit_category_scraper.py --all --location "$loc" &
+            done
 
+            # Myntra — all predefined fashion categories
             python3 myntra/myntra_sales_estimator.py \
-              --keywords "tshirts,sneakers,kurta,jeans,shoes" \
-              --pages 3 --out-dir data &
+              --all-categories --out-dir data &
 
-            python3 amazon/amazon_scraper.py \
-              --keywords "protein powder,running shoes,electronics" \
-              --top 30 --out-dir data &
+            # Amazon — discover all ASINs via sitemap, then scrape details
+            python3 amazon/amazon_sitemap.py --all --out-dir data
+            python3 amazon/amazon_scraper.py --from-snapshots --out-dir data &
 
-            python3 flipkart/flipkart_scraper.py \
-              --keywords "protein powder,running shoes,electronics" \
-              --top 30 --out-dir data &
+            # Flipkart — discover all PIDs via sitemap, then scrape details
+            python3 flipkart/flipkart_sitemap.py --all --out-dir data
+            python3 flipkart/flipkart_scraper.py --from-snapshots --out-dir data &
 
-            # Wait for all to finish
+            # Wait for all background jobs to finish
             wait
 
-            # Consolidate and upload to R2
-            python3 pipeline/consolidate.py --data-dir data --out-dir data
+            # Upload to Cloudflare R2
             python3 pipeline/r2_sync.py --upload --data-dir data
 
             echo "✅ All pipelines done"
-
-      - name: Commit data to repo
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Push data from VM to repo
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.ORACLE_HOST }}
-          username: ubuntu
-          key: ${{ secrets.ORACLE_SSH_KEY }}
-          script: |
-            cd /home/ubuntu/scraper
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add data/
-            git diff --staged --quiet && echo "No changes" || \
-              git commit -m "chore: daily data update $(date -u +%Y-%m-%d)"
-            git push
