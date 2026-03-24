@@ -1,0 +1,79 @@
+name: Daily Pipeline Monitor
+
+on:
+  schedule:
+    - cron: '0 2 * * *'   # 7:30 AM IST — 1.5 hrs after pipeline fires, enough time to finish
+  workflow_dispatch:
+
+jobs:
+  check-and-notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Fetch pipeline log from Oracle VM
+        id: fetch_log
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.ORACLE_HOST }}
+          username: ubuntu
+          key: ${{ secrets.ORACLE_SSH_KEY }}
+          timeout: 2m
+          script: |
+            LOG=/home/ubuntu/logs/daily_pipeline.log
+
+            if [ ! -f "$LOG" ]; then
+              echo "STATUS=MISSING"
+              echo "SUMMARY=Log file not found — pipeline may not have run yet."
+              exit 0
+            fi
+
+            # Get last run block (everything after last '===')
+            LAST_RUN=$(tac "$LOG" | awk '/={10}/{found=1} found{print} /Daily Pipeline/{exit}' | tac)
+
+            # Detect outcome
+            if echo "$LAST_RUN" | grep -q "✅ Done"; then
+              echo "STATUS=SUCCESS"
+            elif echo "$LAST_RUN" | grep -qi "error\|traceback\|exception"; then
+              echo "STATUS=ERROR"
+            else
+              echo "STATUS=UNKNOWN"
+            fi
+
+            # Last 80 lines as summary
+            echo "--- LAST 80 LINES OF LOG ---"
+            tail -80 "$LOG"
+
+      - name: Check R2 storage usage
+        id: r2_check
+        run: |
+          RESPONSE=$(curl -s "${{ secrets.R2_WORKER_URL }}usage" \
+            -H "X-API-Key: ${{ secrets.R2_API_KEY }}")
+          echo "R2 response: $RESPONSE"
+          echo "r2_response=$RESPONSE" >> $GITHUB_OUTPUT
+
+      - name: Send status email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.NOTIFY_EMAIL }}
+          password: ${{ secrets.NOTIFY_EMAIL_PASSWORD }}
+          to: ${{ secrets.NOTIFY_EMAIL }}
+          from: "Market Intel Bot <${{ secrets.NOTIFY_EMAIL }}>"
+          subject: "[${{ steps.fetch_log.outcome == 'success' && 'OK' || 'FAIL' }}] Daily Scrape — ${{ env.TODAY }}"
+          body: |
+            Daily Market Intelligence Pipeline — ${{ env.TODAY }}
+            =========================================================
+
+            Oracle VM Cron: ${{ steps.fetch_log.outcome }}
+            R2 Storage: ${{ steps.r2_check.outputs.r2_response }}
+
+            --- Pipeline Log (last 80 lines) ---
+            ${{ steps.fetch_log.outputs.stdout }}
+
+            =========================================================
+            VM: 129.159.16.42 | Repo: saimuralichitturi-bit/external_sources
+        env:
+          TODAY: ${{ github.run_started_at }}
