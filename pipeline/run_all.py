@@ -75,7 +75,14 @@ def main():
     for p in procs:
         p.wait()
 
-    # Upload to R2
+    # Consolidate platform CSVs into unified files
+    print("\n  Consolidating into unified CSVs...")
+    subprocess.run(
+        [sys.executable, "pipeline/consolidate.py", "--data-dir", "data", "--out-dir", "data"],
+        cwd=ROOT, env=os.environ.copy(),
+    )
+
+    # Upload unified files to R2
     print("\n  Uploading to Cloudflare R2...")
     result = subprocess.run(
         [sys.executable, "pipeline/r2_sync.py", "--upload", "--data-dir", "data"],

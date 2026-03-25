@@ -1,4 +1,4 @@
-# MEMORY.md — Blinkit Market Intelligence Project
+give# MEMORY.md — Blinkit Market Intelligence Project
 
 > Auto-maintained knowledge base. Last updated by project setup.
 
